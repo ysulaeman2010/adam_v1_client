@@ -1,0 +1,1 @@
+export const GET_FACE_STATUS = "GET_FACE_STATUS";
