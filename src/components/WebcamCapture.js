@@ -1,11 +1,10 @@
-import React, { useState, useRef } from "react";
+import React, { useRef, useCallback } from "react";
 import Webcam from "react-webcam";
 
-import * as faceapi from "@tensorflow/tfjs";
+import * as tf from "@tensorflow/tfjs";
 import * as facemesh from "@tensorflow-models/facemesh";
 
-import { useDispatch } from "react-redux";
-import { getFaceStatus } from "../data";
+import { drawPath } from "../utils/functions";
 
 const videoConstraints = {
   width: 720,
@@ -15,13 +14,16 @@ const videoConstraints = {
 
 const WebcamCapture = () => {
   const webcamRef = useRef(null);
-  const dispatch = useDispatch();
+  const canvasRef = useRef(null);
 
   const runFacemesh = async () => {
-    const net = await facemesh.load();
+    const net = await facemesh.load({
+      inputResolution: { width: 720, height: 360 },
+      scale: 0.8,
+    });
     setInterval(() => {
       detect(net);
-    }, 1000);
+    }, 100);
   };
 
   const detect = async (net) => {
@@ -32,40 +34,63 @@ const WebcamCapture = () => {
     ) {
       const video = webcamRef.current.video;
 
+      const videoWidth = webcamRef.current.video.videoWidth;
+      const videoHeight = webcamRef.current.video.videoHeight;
+
+      webcamRef.current.video.width = videoWidth;
+      webcamRef.current.video.height = videoHeight;
+
+      canvasRef.current.width = videoWidth;
+      canvasRef.current.height = videoHeight;
+
       const detections = await net.estimateFaces(video);
-      try {
-        if (detections[0].faceInViewConfidence < 0.9) {
-          dispatch(
-            getFaceStatus(
-              "Menggunakan masker",
-              ((1 - detections[0].faceInViewConfidence) * 100).toFixed(2)
-            )
-          );
+
+      if (detections.length > 0) {
+        const faceConfidence = detections[0].faceInViewConfidence;
+        if (faceConfidence < 0.8) {
+          console.log(`Mask on, confidence level ${faceConfidence}`);
         } else {
-          dispatch(
-            getFaceStatus(
-              "Tidak menggunakan masker",
-              (detections[0].faceInViewConfidence * 100).toFixed(2)
-            )
-          );
+          console.log(`Mask off, confidence level ${faceConfidence} `);
         }
-      } catch (e) {
-        console.log("error");
       }
+
+      const ctx = canvasRef.current.getContext("2d");
+      drawPath(detections, ctx);
     }
   };
+
+  const capture = useCallback(() => {
+    const imgSrc = webcamRef.current.getScreenshot();
+    console.log(`Image taken`);
+  }, [webcamRef]);
 
   runFacemesh();
 
   return (
-    <Webcam
-      audio={false}
-      height={videoConstraints.height}
-      width={videoConstraints.width}
-      ref={webcamRef}
-      screenshotFormat="image/jpeg"
-      videoConstraints={videoConstraints}
-    />
+    <React.Fragment>
+      <Webcam
+        audio={false}
+        height={videoConstraints.height}
+        width={videoConstraints.width}
+        ref={webcamRef}
+        screenshotFormat="image/jpeg"
+        videoConstraints={videoConstraints}
+      />
+      <canvas
+        ref={canvasRef}
+        style={{
+          position: "absolute",
+          marginLeft: "auto",
+          marginRight: "auto",
+          left: 0,
+          right: 0,
+          textAlign: "center",
+          zindex: 9,
+          width: 720,
+          height: 360,
+        }}
+      />
+    </React.Fragment>
   );
 };
 

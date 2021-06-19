@@ -20,7 +20,9 @@ const Home = () => {
       <div className="video__container">
         <WebcamCapture />
       </div>
-      <div className="home__footer">Status</div>
+      <div className="home__footer">
+        {data.camera.status ? <p>Image saved</p> : <p>Image not saved</p>}
+      </div>
     </div>
   );
 };

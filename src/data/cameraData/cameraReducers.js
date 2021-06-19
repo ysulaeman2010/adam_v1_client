@@ -1,12 +1,12 @@
 import { GET_CAMERA_IMAGE, RESET_CAMERA_IMAGE } from "./cameraTypes";
 
 const initialState = {
-  imageURL: "",
+  imageURL: null,
   status: false,
 };
 
 const cameraReducers = (state = initialState, action) => {
-  switch (action) {
+  switch (action.type) {
     case GET_CAMERA_IMAGE:
       return {
         ...state,
@@ -17,7 +17,7 @@ const cameraReducers = (state = initialState, action) => {
     case RESET_CAMERA_IMAGE:
       return {
         ...state,
-        imageURL: "",
+        imageURL: null,
         status: false,
       };
 
